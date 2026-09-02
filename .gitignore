@@ -1,0 +1,33 @@
+# ============ 构建产物(Eclipse 生成,可重新编译) ============
+Release/
+Debug/
+Debug_without_ISDN/
+
+# 对象文件 / 依赖文件
+*.o
+*.d
+
+# ============ 数据库(SQLite,程序自动生成) ============
+*.db
+*.db-journal
+
+# ============ 日志 ============
+*.log
+
+# ============ 部署产物(build.sh 拷贝,可重新生成) ============
+docker-deploy/smallmgc
+docker-deploy/runtime/test.db
+docker-deploy/runtime/calls.db
+docker-deploy/runtime/smallmgc.log
+
+# ============ 系统 / IDE ============
+.DS_Store
+*.swp
+
+# ============ 版本控制残留(SVN 元数据) ============
+.svn/
+
+# 配置备份(调试产物)
+configuration.xml.bak
+configuration.xml.bridge
+configuration.xml.running

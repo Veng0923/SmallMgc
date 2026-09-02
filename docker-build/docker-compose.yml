@@ -1,0 +1,41 @@
+# SmallMGC 0.043.000 容器编译
+#
+# 用法:
+#   docker compose build     # 构建编译镜像(首次较慢,拉取依赖)
+#   docker compose run --rm build   # 编译 Release 版本
+#   docker compose up -d run        # 运行 smallmgc(带端口映射;注意: run 命令
+#                                   # 默认不映射端口,需加 --service-ports)
+#
+# 说明: 基础镜像为 Ubuntu 10.04(gcc 4.4 + Poco 1.3.6p1),与项目同年代。
+#       必须 32 位编译(-m32): APG 生成的 H.248 解析数据表是 32 位布局,
+#       64 位下 CRC 校验失败导致解析器初始化失败,收到任何报文即段错误。
+#       makefile 已加 -m32,链接补 -lexpat -lz; 32 位 Poco/sctp/sqlite/
+#       expat/pcre/zlib 库由 Dockerfile 从 i386 deb 解压并软链就位。
+#       已启用官方 -DNO_ISDN 宏,消除 SCTP/IUA 报错刷屏。
+#       MGC 监听地址已改为 0.0.0.0(备份于 configuration.xml.bak),
+#       代码硬编码读取 ./configuration.xml,命令行 -D 覆盖无效。
+#       编译产物 smallmgc 直接输出到源码目录 Release/ 下。
+services:
+  # 编译服务: make all 编译 Release 版
+  build:
+    build: .
+    image: smallmgc-build:latest
+    volumes:
+      - /home/lsf/下载/smallmgc_0.043.000/smallmgc:/home/lsf/下载/smallmgc_0.043.000/smallmgc
+    working_dir: /home/lsf/下载/smallmgc_0.043.000/smallmgc/Release
+    command: sh -c "make clean && make all -j$$(nproc)"
+
+  # 运行服务: 启动 smallmgc
+  # 用法: docker compose up -d run
+  # host 网络: 容器直接用宿主网络栈,程序绑定配置的 MGC IP(172.16.100.148),
+  #            使 ServiceChange Reply 头里的 MID 是真实 IP(而非 0.0.0.0),
+  #            模拟网关才能识别应答。host 网络下无需端口映射。
+  run:
+    build: .
+    image: smallmgc-build:latest
+    network_mode: host
+    volumes:
+      - /home/lsf/下载/smallmgc_0.043.000/smallmgc:/home/lsf/下载/smallmgc_0.043.000/smallmgc
+    working_dir: /home/lsf/下载/smallmgc_0.043.000/smallmgc
+    command: ./Release/smallmgc
+    tty: true                     # 分配 tty: CLI 的 fgets 阻塞等待输入,避免提示符无限刷屏

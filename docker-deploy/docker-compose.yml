@@ -1,0 +1,24 @@
+# SmallMGC 0.043.000 部署编排
+#
+# 用法:
+#   ./build.sh                      # 拷贝二进制并构建部署镜像
+#   docker compose up -d            # 部署启动
+#   docker compose logs -f          # 查看日志
+#
+# 配置:
+#   runtime/configuration.xml       # 部署配置(改完重启容器生效)
+#   runtime/test.db / calls.db      # 程序生成的数据库(自动创建)
+#
+# 网络: host 网络,MGC 绑定配置里的 mgc.ip.h248(部署服务器真实 IP),
+#        Reply 头 MID 使用该 IP,模拟网关才能识别应答。
+services:
+  smallmgc:
+    build: .
+    image: smallmgc-deploy:latest
+    network_mode: host
+    volumes:
+      - ./runtime:/opt/smallmgc/runtime
+    working_dir: /opt/smallmgc/runtime
+    command: /opt/smallmgc/smallmgc
+    tty: true                     # 分配 tty,避免 CLI 提示符无限刷屏
+    restart: unless-stopped

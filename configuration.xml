@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ====================================================================
+     SmallMGC 0.043.000 H.248 服务器配置
+     适用环境: Docker 容器内运行, MGC 监听 0.0.0.0:2944
+     说明:
+       - 程序启动时硬编码读取 ./configuration.xml(命令行 -D 无效),改完重启生效
+       - 网关(MG)的 MID 等于其 <ip><h248> 地址或 <name> 时即视为已注册网关
+       - 已用官方 -DNO_ISDN 宏编译, ISDN/PRI 号码段配置不生效(保留仅作参考)
+     ==================================================================== -->
+<config>
+
+    <!-- ============ 应用数据段 ============ -->
+    <app>
+        <configdatabase>
+            <persistent>1</persistent>   <!-- 配置持久化 -->
+            <filename>test</filename>     <!-- 配置缓存 sqlite 文件名(test.db) -->
+            <external>0</external>        <!-- 0=从本 XML 读配置, 1=从 sqlite 读 -->
+            <xmlfile>1</xmlfile>          <!-- 1=XML 为配置源 -->
+        </configdatabase>
+        <calldatabase>
+            <persistent>1</persistent>    <!-- 呼叫记录持久化 -->
+            <filename>calls</filename>    <!-- 呼叫数据库文件名(calls.db) -->
+        </calldatabase>
+    </app>
+
+    <!-- ============ 测试模式段(未启用,保留结构) ============ -->
+    <test>
+        <filename>commands.txt</filename>
+    </test>
+
+    <!-- ============ MGC 自身配置 ============ -->
+    <mgc>
+        <name>SmallMGC</name>
+        <ip>
+            <h248>172.16.0.228</h248>         <!-- MGC H.248 监听地址: host 网络下用宿主真实 IP(Reply 头 MID 用它) -->
+            <h248port>2944</h248port>    <!-- H.248 UDP 端口(宿主机映射 2944) -->
+            <sigtran>0.0.0.0</sigtran>
+            <sigtranport>0</sigtranport>
+        </ip>
+        <retransmission>7</retransmission>       <!-- 重传次数 -->
+        <modifybundles>20</modifybundles>
+        <bundlestimeout>100</bundlestimeout>
+        <startupmodifywithtimer>1</startupmodifywithtimer>
+        <digitmap>xxxxx</digitmap>               <!-- 号码匹配模板 -->
+        <callcontrol>a</callcontrol>             <!-- 默认呼叫流程: a=基本呼叫 -->
+        <esa>
+            <mode>0</mode>                       <!-- 0=关闭 ESA 切换 -->
+            <timeout>60000</timeout>
+            <primarymgc>
+                <ip>
+                    <h248>10.1.2.51</h248>       <!-- 备用 MGC 地址(ESA 用) -->
+                    <h248port>2944</h248port>
+                    <sigtran>0.0.0.0</sigtran>
+                    <sigtranport>0</sigtranport>
+                </ip>
+            </primarymgc>
+        </esa>
+        <busytoneduration>30000</busytoneduration>
+        <congestiontoneduration>10000</congestiontoneduration>
+        <howlertoneduration>20000</howlertoneduration>
+    </mgc>
+
+    <!-- ==================================================================
+         网关1: first —— 标准 PSTN 网关示例
+         网关 MID 为 10.1.2.20(或名字 first), 号码 12340~12349
+         实际使用时把 <h248> 改成你的网关地址即可
+         ================================================================== -->
+    <gateway>
+        <name>first</name>
+        <ip>
+            <h248>192.168.144.141</h248>
+            <h248port>2944</h248port>
+            <sigtran>0.0.0.0</sigtran>
+            <sigtranport>0</sigtranport>
+        </ip>
+        <profile>profile_default</profile>       <!-- 引用 profile_default.xml -->
+        <callcontrol>a</callcontrol>
+        <itpackage>
+            <mode>1</mode>
+            <timeout>12000</timeout>
+        </itpackage>
+        <terminations>
+            <pstn>
+                <!-- 注册号码: id=H.248 Termination ID, number=电话号码 -->
+                <subscriber>
+                    <id>A0</id>
+                    <number>12340</number>
+                </subscriber>
+                <subscriber>
+                    <id>A1</id>
+                    <number>12341</number>
+                </subscriber>
+            </pstn>
+            <!-- ISDN 号码(本构建 NO_ISDN 不生效,仅示例)
+            <isdn>
+                <subscriber>
+                    <iua>ba/1</iua>
+                    <iuaint>1</iuaint>
+                    <id>ba/1/b1</id>
+                    <id1>ba/1/b2</id1>
+                    <number>33300</number>
+                </subscriber>
+            </isdn>
+            -->
+        </terminations>
+    </gateway>
+
+    <!-- ==================================================================
+         网关2: G10-SFU —— 本机模拟网关(测试用)
+         网关 MID 为 127.0.0.1(或名字 G10-SFU), 号码 32340
+         适用于在本机/容器内起一个模拟 MG 验证 H.248 交互
+         ================================================================== -->
+    <gateway>
+        <name>G10-SFU</name>
+        <ip>
+            <h248>192.168.144.142</h248>
+            <h248port>2944</h248port>
+            <sigtran>0.0.0.0</sigtran>
+            <sigtranport>0</sigtranport>
+        </ip>
+        <profile>profile_default</profile>
+        <callcontrol>n</callcontrol>             <!-- n=ETSI 流程 -->
+        <itpackage>
+            <mode>1</mode>
+            <timeout>12000</timeout>
+        </itpackage>
+        <terminations>
+            <pstn>
+                <subscriber>
+                    <id>A0</id>
+                    <number>32340</number>
+                </subscriber>
+            </pstn>
+        </terminations>
+    </gateway>
+
+</config>
