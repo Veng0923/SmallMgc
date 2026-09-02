@@ -35,7 +35,7 @@ docker compose up -d                # 同时启动 smallmgc + web-admin
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `SMALLMGC_CONFIG` | `../docker-deploy/runtime/configuration.xml` | 配置文件路径 |
-| `SMALLMGC_CONTAINER` | `docker-deploy-smallmgc-1` | 重启的容器名(注意 Docker Compose 用连字符,Podman Compose 用下划线) |
+| `SMALLMGC_CONTAINER` | `smallmgc` | 重启的容器名(compose 已用 container_name 固定) |
 | `WEB_HOST` / `WEB_PORT` | `0.0.0.0` / `8080` | 监听地址/端口 |
 
 ## 安全提示

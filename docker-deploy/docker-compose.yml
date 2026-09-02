@@ -15,6 +15,7 @@ services:
   smallmgc:
     build: .
     image: smallmgc-deploy:latest
+    container_name: smallmgc          # 固定容器名,web-admin 重启依赖它
     network_mode: host
     volumes:
       - ./runtime:/opt/smallmgc/runtime
@@ -24,13 +25,11 @@ services:
     restart: unless-stopped
 
   # Web 配置管理(独立容器,通过 docker.sock / podman.sock 重启 smallmgc)
-  # 注意: SMALLMGC_CONTAINER 需与编排工具生成的容器名一致:
-  #   Docker Compose:    docker-deploy-smallmgc-1
-  #   Podman Compose:    docker-deploy_smallmgc_1
   web-admin:
     build:
       context: ../web-admin
     image: smallmgc-webadmin:latest
+    container_name: smallmgc-webadmin
     ports:
       - "8080:8080"
     volumes:
@@ -40,5 +39,5 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - SMALLMGC_CONFIG=/opt/smallmgc/runtime/configuration.xml
-      - SMALLMGC_CONTAINER=docker-deploy-smallmgc-1
+      - SMALLMGC_CONTAINER=smallmgc
     restart: unless-stopped

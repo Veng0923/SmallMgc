@@ -28,10 +28,10 @@ docker compose logs -f        # 查看日志
 > - `smallmgc`:H.248 服务器(host 网络,监听配置的 mgc.ip.h248:2944)
 > - `web-admin`:配置管理界面(http://服务器IP:8080,保存配置后自动重启 smallmgc)
 >
-> Docker 环境用 `docker compose`;Podman 环境用 `podman-compose`。
-> 注意容器名差异:Docker Compose 为 `docker-deploy-smallmgc-1`(连字符),
-> Podman Compose 为 `docker-deploy_smallmgc_1`(下划线)——web-admin 的
-> `SMALLMGC_CONTAINER` 环境变量需与编排工具对应(compose 文件里已配 Docker 版)。
+> 两个服务都用了 `container_name` 固定容器名(`smallmgc` / `smallmgc-webadmin`),
+> web-admin 通过挂载的 docker.sock(Podman 用 podman.sock)重启 smallmgc。
+> Docker 环境用 `docker compose`,Podman 环境用 `podman-compose`(Podman 下
+> 需把 socket 挂载路径改为 podman.sock)。
 
 ## 镜像依赖关系(重要)
 
