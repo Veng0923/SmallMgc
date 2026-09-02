@@ -46,3 +46,7 @@ docker-deploy/runtime/smallmgc.log
 configuration.xml.bak
 configuration.xml.bridge
 configuration.xml.running
+
+# ============ IDE 配置(个人环境) ============
+.idea/
+*.iml
