@@ -40,4 +40,6 @@ services:
     environment:
       - SMALLMGC_CONFIG=/opt/smallmgc/runtime/configuration.xml
       - SMALLMGC_CONTAINER=smallmgc
+      - WEB_USER=${WEB_USER:-admin}          # 登录用户名(部署时修改)
+      - WEB_PASSWORD=${WEB_PASSWORD:-admin}  # 登录密码(部署时务必修改)
     restart: unless-stopped

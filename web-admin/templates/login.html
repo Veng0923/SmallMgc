@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>登录 - SmallMGC 配置管理</title>
+<style>
+  body { font-family: "Microsoft YaHei", sans-serif; background: #f5f6fa; margin: 0;
+         display: flex; justify-content: center; align-items: center; height: 100vh; }
+  .login-box { background: #fff; border-radius: 8px; padding: 32px 40px; width: 320px;
+               box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  h1 { color: #2c3e50; font-size: 20px; text-align: center; margin-top: 0; }
+  label { display: block; font-weight: bold; color: #555; margin: 12px 0 4px; }
+  input[type=text], input[type=password] { width: 100%; padding: 8px; border: 1px solid #ccc;
+         border-radius: 4px; box-sizing: border-box; }
+  .btn { width: 100%; padding: 10px; background: #3498db; color: #fff; border: none;
+         border-radius: 4px; font-size: 15px; cursor: pointer; margin-top: 18px; }
+  .btn:hover { background: #2980b9; }
+  .flash { padding: 8px 12px; border-radius: 4px; margin-top: 12px; font-size: 13px; }
+  .flash.error { background: #fadbd8; color: #c0392b; }
+  .flash.success { background: #d4efdf; color: #1e7e34; }
+  .hint { color: #aaa; font-size: 12px; text-align: center; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="login-box">
+  <h1>🎛️ SmallMGC 配置管理</h1>
+  <form method="post" action="/login">
+    <label>用户名</label>
+    <input type="text" name="username" autofocus required>
+    <label>密码</label>
+    <input type="password" name="password" required>
+    <button type="submit" class="btn">登 录</button>
+  </form>
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+  <div class="hint">默认账号 admin / admin,请通过环境变量修改</div>
+</div>
+</body>
+</html>

@@ -12,9 +12,10 @@ SmallMGC Web 配置管理服务
 import os
 import subprocess
 import shutil
+import functools
 from pathlib import Path
 
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 from lxml import etree
 
 # ---------------- 配置 ----------------
@@ -23,12 +24,25 @@ BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = Path(os.environ.get("SMALLMGC_CONFIG",
                                   BASE_DIR.parent / "docker-deploy" / "runtime" / "configuration.xml"))
 # 重启的容器名(默认 docker-deploy 编排的容器)
-CONTAINER_NAME = os.environ.get("SMALLMGC_CONTAINER", "docker-deploy_smallmgc_1")
+CONTAINER_NAME = os.environ.get("SMALLMGC_CONTAINER", "smallmgc")
 HOST = os.environ.get("WEB_HOST", "0.0.0.0")
 PORT = int(os.environ.get("WEB_PORT", "8080"))
+# 登录凭据(务必通过环境变量修改默认密码)
+WEB_USER = os.environ.get("WEB_USER", "admin")
+WEB_PASSWORD = os.environ.get("WEB_PASSWORD", "admin")
 
 app = Flask(__name__)
-app.secret_key = "smallmgc-web-admin"  # flash 消息用,局域网工具
+app.secret_key = os.environ.get("WEB_SECRET", "smallmgc-web-admin")  # flash/session 用
+
+
+def login_required(view):
+    """未登录跳转登录页"""
+    @functools.wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login", next=request.path))
+        return view(*args, **kwargs)
+    return wrapped
 
 
 # ---------------- XML 读写 ----------------
@@ -206,7 +220,26 @@ def restart_smallmgc():
 
 
 # ---------------- 路由 ----------------
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        if (request.form.get("username", "") == WEB_USER
+                and request.form.get("password", "") == WEB_PASSWORD):
+            session["logged_in"] = True
+            return redirect(request.args.get("next") or url_for("index"))
+        flash("用户名或密码错误", "error")
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("已退出登录", "success")
+    return redirect(url_for("login"))
+
+
 @app.route("/")
+@login_required
 def index():
     root, err = load_config()
     if err:
@@ -218,6 +251,7 @@ def index():
 
 
 @app.route("/save", methods=["POST"])
+@login_required
 def save():
     ok, msg = save_config(request.form)
     flash(msg, "success" if ok else "error")
@@ -229,6 +263,7 @@ def save():
 
 
 @app.route("/restart", methods=["POST"])
+@login_required
 def restart():
     ok, msg = restart_smallmgc()
     flash(msg, "success" if ok else "error")

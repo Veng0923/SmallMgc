@@ -4,6 +4,7 @@
 
 ## 功能
 
+- **登录认证**:访问管理界面需登录(默认 admin/admin,**部署时务必修改密码**)
 - **查看/编辑配置**:结构化表单(MGC 段 + 网关段 + 号码增删改),不会写坏 XML 结构
 - **保存**:写回 configuration.xml(保留全部注释),自动备份旧配置为 `configuration.xml.bak_web`
 - **重启**:保存后自动重启 smallmgc 容器;也可单独点"仅重启"(通过 docker.sock / podman.sock 的 Docker API,兼容 Docker 与 Podman)
@@ -36,11 +37,12 @@ docker compose up -d                # 同时启动 smallmgc + web-admin
 |---|---|---|
 | `SMALLMGC_CONFIG` | `../docker-deploy/runtime/configuration.xml` | 配置文件路径 |
 | `SMALLMGC_CONTAINER` | `smallmgc` | 重启的容器名(compose 已用 container_name 固定) |
+| `WEB_USER` / `WEB_PASSWORD` | `admin` / `admin` | **登录凭据(部署时务必修改)** |
 | `WEB_HOST` / `WEB_PORT` | `0.0.0.0` / `8080` | 监听地址/端口 |
 
 ## 安全提示
 
-- 局域网管理工具,**无认证**,请勿暴露到公网;
+- ⚠️ **默认密码 admin/admin,部署时通过环境变量 `WEB_USER`/`WEB_PASSWORD` 修改**(compose 里 `docker compose up -d -e WEB_PASSWORD=xxx` 或 .env 文件);
 - ⚠️ 容器化部署挂载了 docker.sock,容器可控制宿主所有容器——仅限可信内网;
 - 保存会重启 smallmgc(短暂中断呼叫),页面有确认提示;
 - 每次保存自动备份,出错可用 `configuration.xml.bak_web` 恢复。
