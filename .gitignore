@@ -6,8 +6,17 @@ Release/*.d
 Release/smallmgc
 Release/**/*.o
 Release/**/*.d
-Debug/
-Debug_without_ISDN/
+# Debug / Debug_without_ISDN: 同样保留 makefile 配置,忽略产物
+Debug/*.o
+Debug/*.d
+Debug/smallmgc
+Debug/**/*.o
+Debug/**/*.d
+Debug_without_ISDN/*.o
+Debug_without_ISDN/*.d
+Debug_without_ISDN/smallmgc
+Debug_without_ISDN/**/*.o
+Debug_without_ISDN/**/*.d
 
 # 对象文件 / 依赖文件
 *.o
