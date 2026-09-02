@@ -5,14 +5,33 @@
 ```
 docker-deploy/
 ├── Dockerfile              # 部署镜像(基于编译镜像,含全部 32 位运行库)
-├── docker-compose.yml      # 部署编排(host 网络 + 配置挂载)
+├── docker-compose.yml      # 部署编排(smallmgc host 网络 + web-admin 管理)
 ├── build.sh                # 一键构建脚本
+├── web-admin/              # Web 配置管理(独立镜像,见 web-admin/README.md)
 └── runtime/                # ★ 部署时挂载的运行目录
     ├── configuration.xml   #   部署配置(修改后重启容器生效)
     └── profile_default.xml #   profile 文件(缺失会导致启动崩溃,勿删)
 ```
 
 > runtime/ 里还会自动生成 test.db / calls.db(SQLite 数据库,持久化在宿主机)。
+
+## 部署步骤
+
+```bash
+cd docker-deploy
+./build.sh                    # 拷贝 Release 二进制并构建 smallmgc-deploy 镜像
+docker compose up -d          # 启动(smallmgc + web-admin)
+docker compose logs -f        # 查看日志
+```
+
+> 同时启动两个服务:
+> - `smallmgc`:H.248 服务器(host 网络,监听配置的 mgc.ip.h248:2944)
+> - `web-admin`:配置管理界面(http://服务器IP:8080,保存配置后自动重启 smallmgc)
+>
+> Docker 环境用 `docker compose`;Podman 环境用 `podman-compose`。
+> 注意容器名差异:Docker Compose 为 `docker-deploy-smallmgc-1`(连字符),
+> Podman Compose 为 `docker-deploy_smallmgc_1`(下划线)——web-admin 的
+> `SMALLMGC_CONTAINER` 环境变量需与编排工具对应(compose 文件里已配 Docker 版)。
 
 ## 镜像依赖关系(重要)
 

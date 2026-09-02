@@ -160,17 +160,47 @@ def save_config(form):
 
 
 def restart_smallmgc():
-    """重启 smallmgc 容器使配置生效"""
+    """重启 smallmgc 容器使配置生效
+    优先走容器运行时 socket(Docker SDK,兼容 Docker/Podman),
+    失败则回退到 docker/podman CLI。
+    """
+    # ---- 方式1: Docker SDK(unix socket) ----
+    sock_candidates = [
+        "unix:///var/run/docker.sock",               # Docker(容器内挂载)/ 本机 root
+        "unix:///run/user/1000/podman/podman.sock",  # Podman rootless
+        "unix:///run/podman/podman.sock",            # Podman root
+    ]
     try:
-        r = subprocess.run(["podman", "restart", CONTAINER_NAME],
-                           capture_output=True, text=True, timeout=30)
-        if r.returncode == 0:
-            return True, f"容器 {CONTAINER_NAME} 已重启"
-        return False, f"重启失败: {r.stderr.strip() or r.stdout.strip()}"
-    except FileNotFoundError:
-        return False, "未找到 podman 命令"
-    except Exception as e:
-        return False, f"重启异常: {e}"
+        import docker
+        for base_url in sock_candidates:
+            sock_path = base_url.replace("unix://", "")
+            if not os.path.exists(sock_path):
+                continue
+            try:
+                client = docker.DockerClient(base_url=base_url, timeout=10)
+                c = client.containers.get(CONTAINER_NAME)
+                c.restart(timeout=20)
+                return True, f"容器 {CONTAINER_NAME} 已重启(socket API)"
+            except docker.errors.NotFound:
+                return False, f"容器 {CONTAINER_NAME} 不存在(检查 SMALLMGC_CONTAINER)"
+            except Exception:
+                continue  # 尝试下一个 socket
+    except ImportError:
+        pass
+
+    # ---- 方式2: CLI(docker / podman) ----
+    for cli in ("docker", "podman"):
+        try:
+            r = subprocess.run([cli, "restart", CONTAINER_NAME],
+                               capture_output=True, text=True, timeout=30)
+            if r.returncode == 0:
+                return True, f"容器 {CONTAINER_NAME} 已重启({cli})"
+            return False, f"重启失败: {r.stderr.strip() or r.stdout.strip()}"
+        except FileNotFoundError:
+            continue
+        except Exception as e:
+            return False, f"重启异常: {e}"
+    return False, "未找到可用的容器运行时(需挂载 docker.sock / podman.sock,或安装 docker/podman CLI)"
 
 
 # ---------------- 路由 ----------------
