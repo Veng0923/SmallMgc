@@ -1,5 +1,11 @@
 # ============ 构建产物(Eclipse 生成,可重新编译) ============
-Release/
+# 注意: Release/ 下的 makefile 配置是编译必需的,必须保留!
+#       (编译容器在 Release/ 目录执行 make,克隆后可直接编译)
+Release/*.o
+Release/*.d
+Release/smallmgc
+Release/**/*.o
+Release/**/*.d
 Debug/
 Debug_without_ISDN/
 
