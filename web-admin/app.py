@@ -114,6 +114,7 @@ def save_config(form):
     set_text(mgc, "name", form.get("mgc_name", ""))
     set_text(mgc.find("ip"), "h248", form.get("mgc_h248", ""))
     set_text(mgc.find("ip"), "h248port", form.get("mgc_h248port", "2944"))
+    set_text(mgc, "digitmap", form.get("mgc_digitmap", ""))
     set_text(mgc, "callcontrol", form.get("mgc_callcontrol", "a"))
 
     # ---- 网关段(按表单索引重建 pstn 号码) ----
