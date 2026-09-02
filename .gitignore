@@ -50,3 +50,7 @@ configuration.xml.running
 # ============ IDE 配置(个人环境) ============
 .idea/
 *.iml
+
+# ============ Web 管理(venv 虚拟环境) ============
+web-admin/venv/
+docker-deploy/runtime/configuration.xml.bak_web

@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+SmallMGC Web 配置管理服务
+- 读取/编辑 configuration.xml(结构化表单,保留注释)
+- 保存配置
+- 重启 smallmgc 容器使配置生效
+
+运行: python3 app.py  (默认 0.0.0.0:8080)
+依赖: flask, lxml  (见 requirements.txt)
+"""
+import os
+import subprocess
+import shutil
+from pathlib import Path
+
+from flask import Flask, render_template, request, redirect, url_for, flash
+from lxml import etree
+
+# ---------------- 配置 ----------------
+BASE_DIR = Path(__file__).resolve().parent
+# 配置文件路径(默认部署目录;可用环境变量覆盖)
+CONFIG_PATH = Path(os.environ.get("SMALLMGC_CONFIG",
+                                  BASE_DIR.parent / "docker-deploy" / "runtime" / "configuration.xml"))
+# 重启的容器名(默认 docker-deploy 编排的容器)
+CONTAINER_NAME = os.environ.get("SMALLMGC_CONTAINER", "docker-deploy_smallmgc_1")
+HOST = os.environ.get("WEB_HOST", "0.0.0.0")
+PORT = int(os.environ.get("WEB_PORT", "8080"))
+
+app = Flask(__name__)
+app.secret_key = "smallmgc-web-admin"  # flash 消息用,局域网工具
+
+
+# ---------------- XML 读写 ----------------
+def load_config():
+    """解析 configuration.xml,返回 (etree tree, 错误信息或 None)"""
+    try:
+        tree = etree.parse(str(CONFIG_PATH))
+        return tree, None
+    except Exception as e:
+        return None, f"解析配置文件失败: {e}"
+
+
+def get_mgc(root):
+    """提取 MGC 配置(可编辑字段)"""
+    mgc = root.find("mgc")
+    if mgc is None:
+        return {}
+    return {
+        "name": (mgc.findtext("name") or "").strip(),
+        "h248": (mgc.findtext("ip/h248") or "").strip(),
+        "h248port": (mgc.findtext("ip/h248port") or "").strip(),
+        "callcontrol": (mgc.findtext("callcontrol") or "").strip(),
+        "digitmap": (mgc.findtext("digitmap") or "").strip(),
+    }
+
+
+def get_gateways(root):
+    """提取网关列表(可编辑字段 + 号码)"""
+    gateways = []
+    for gw in root.findall("gateway"):
+        subs = []
+        pstn = gw.find("terminations/pstn")
+        if pstn is not None:
+            for sub in pstn.findall("subscriber"):
+                subs.append({
+                    "id": (sub.findtext("id") or "").strip(),
+                    "number": (sub.findtext("number") or "").strip(),
+                })
+        gateways.append({
+            "name": (gw.findtext("name") or "").strip(),
+            "h248": (gw.findtext("ip/h248") or "").strip(),
+            "h248port": (gw.findtext("ip/h248port") or "").strip(),
+            "callcontrol": (gw.findtext("callcontrol") or "").strip(),
+            "profile": (gw.findtext("profile") or "").strip(),
+            "subscribers": subs,
+        })
+    return gateways
+
+
+def set_text(parent, tag, value):
+    """设置/创建子元素文本"""
+    el = parent.find(tag)
+    if el is None:
+        el = etree.SubElement(parent, tag)
+    el.text = value.strip()
+
+
+def save_config(form):
+    """按表单内容更新配置并写回文件"""
+    tree, err = load_config()
+    if tree is None:
+        return False, err
+    root = tree.getroot()
+
+    # ---- MGC 段 ----
+    mgc = root.find("mgc")
+    if mgc is None:
+        return False, "配置缺少 <mgc> 段"
+    set_text(mgc, "name", form.get("mgc_name", ""))
+    set_text(mgc.find("ip"), "h248", form.get("mgc_h248", ""))
+    set_text(mgc.find("ip"), "h248port", form.get("mgc_h248port", "2944"))
+    set_text(mgc, "callcontrol", form.get("mgc_callcontrol", "a"))
+
+    # ---- 网关段(按表单索引重建 pstn 号码) ----
+    gateway_ids = [k for k in form.keys() if k.startswith("gw_name_")]
+    gateway_ids.sort(key=lambda k: int(k.split("_")[-1]))
+    gw_nodes = root.findall("gateway")
+    for idx, gk in enumerate(gateway_ids):
+        i = int(gk.split("_")[-1])
+        if idx < len(gw_nodes):
+            gw = gw_nodes[idx]
+        else:
+            gw = etree.SubElement(root, "gateway")
+            gw_nodes.append(gw)
+        set_text(gw, "name", form.get(f"gw_name_{i}", ""))
+        ip = gw.find("ip")
+        if ip is None:
+            ip = etree.SubElement(gw, "ip")
+        set_text(ip, "h248", form.get(f"gw_h248_{i}", ""))
+        set_text(ip, "h248port", form.get(f"gw_h248port_{i}", "2944"))
+        set_text(gw, "callcontrol", form.get(f"gw_callcontrol_{i}", "a"))
+
+        # 重建 pstn 号码(保留 isdn/pri 不动)
+        terms = gw.find("terminations")
+        if terms is None:
+            terms = etree.SubElement(gw, "terminations")
+        pstn = terms.find("pstn")
+        if pstn is None:
+            pstn = etree.SubElement(terms, "pstn")
+        for old in pstn.findall("subscriber"):
+            pstn.remove(old)
+        for j in range(100):
+            sub_id = form.get(f"gw{i}_sub_id_{j}")
+            sub_num = form.get(f"gw{i}_sub_num_{j}")
+            if sub_id is None:
+                break
+            if sub_id.strip() == "" and sub_num.strip() == "":
+                continue
+            sub = etree.SubElement(pstn, "subscriber")
+            etree.SubElement(sub, "id").text = sub_id.strip()
+            etree.SubElement(sub, "number").text = sub_num.strip()
+
+    # 多余网关节点删除
+    for extra in gw_nodes[len(gateway_ids):]:
+        root.remove(extra)
+
+    # ---- 写回(保留注释、缩进) ----
+    try:
+        etree.indent(root, space="    ")
+        data = etree.tostring(tree, encoding="utf-8",
+                              xml_declaration=True, pretty_print=True)
+        # 备份旧配置
+        backup = CONFIG_PATH.with_suffix(".xml.bak_web")
+        shutil.copy2(CONFIG_PATH, backup)
+        CONFIG_PATH.write_bytes(data)
+    except Exception as e:
+        return False, f"写配置文件失败: {e}"
+    return True, "配置已保存"
+
+
+def restart_smallmgc():
+    """重启 smallmgc 容器使配置生效"""
+    try:
+        r = subprocess.run(["podman", "restart", CONTAINER_NAME],
+                           capture_output=True, text=True, timeout=30)
+        if r.returncode == 0:
+            return True, f"容器 {CONTAINER_NAME} 已重启"
+        return False, f"重启失败: {r.stderr.strip() or r.stdout.strip()}"
+    except FileNotFoundError:
+        return False, "未找到 podman 命令"
+    except Exception as e:
+        return False, f"重启异常: {e}"
+
+
+# ---------------- 路由 ----------------
+@app.route("/")
+def index():
+    root, err = load_config()
+    if err:
+        return render_template("index.html", error=err)
+    return render_template("index.html",
+                           mgc=get_mgc(root),
+                           gateways=get_gateways(root),
+                           config_path=CONFIG_PATH)
+
+
+@app.route("/save", methods=["POST"])
+def save():
+    ok, msg = save_config(request.form)
+    flash(msg, "success" if ok else "error")
+    if ok:
+        # 保存成功后重启容器使配置生效
+        ok2, msg2 = restart_smallmgc()
+        flash(msg2, "success" if ok2 else "error")
+    return redirect(url_for("index"))
+
+
+@app.route("/restart", methods=["POST"])
+def restart():
+    ok, msg = restart_smallmgc()
+    flash(msg, "success" if ok else "error")
+    return redirect(url_for("index"))
+
+
+if __name__ == "__main__":
+    print(f"SmallMGC Web 管理: http://{HOST}:{PORT}")
+    print(f"配置文件: {CONFIG_PATH}")
+    print(f"管理容器: {CONTAINER_NAME}")
+    app.run(host=HOST, port=PORT, debug=False)
