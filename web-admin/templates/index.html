@@ -69,6 +69,7 @@
     </div>
 
     <!-- ============ 网关列表 ============ -->
+    <div id="gw-list">
     {% for gw in gateways %}
     {% set gw_idx = loop.index0 %}
     <div class="panel">
@@ -94,8 +95,11 @@
       <button type="button" class="btn-add" onclick="addSub({{ gw_idx }})">+ 添加号码</button>
     </div>
     {% endfor %}
+    </div>
 
     <div class="panel">
+      <button type="button" class="btn btn-add" style="padding:8px 20px"
+              onclick="addGw()">➕ 添加网关</button>
       <button type="submit" class="btn btn-save">💾 保存并重启</button>
       <button type="button" class="btn btn-restart"
               onclick="restartOnly()">🔄 仅重启(不保存)</button>
@@ -117,6 +121,25 @@ function toggleDigitmap() {
   input.disabled = !show;   // disabled 不提交 → 保存时保留配置里的原数图
 }
 toggleDigitmap();           // 页面加载时按当前配置的呼叫流程初始化
+
+// 网关面板计数: 现有网关数 + 页面内新增数
+let gwCount = {{ gateways|length }};
+function addGw() {
+  const idx = gwCount++;
+  const div = document.createElement('div');
+  div.className = 'panel';
+  div.innerHTML =
+    '<div class="gw-header">网关 ' + idx + ' —— </div>' +
+    '<p><label>名称:</label><input type="text" name="gw_name_' + idx + '"></p>' +
+    '<p><label>网关 IP:</label><input type="text" name="gw_h248_' + idx + '"></p>' +
+    '<p><label>端口:</label><input type="number" name="gw_h248port_' + idx + '" value="2944"></p>' +
+    '<b>注册号码:</b>' +
+    '<table id="subs-' + idx + '">' +
+    '<tr><th>Termination ID</th><th>电话号码</th><th></th></tr>' +
+    '</table>' +
+    '<button type="button" class="btn-add" onclick="addSub(' + idx + ')">+ 添加号码</button>';
+  document.getElementById('gw-list').appendChild(div);
+}
 
 function addSub(gwIdx) {
   const table = document.getElementById('subs-' + gwIdx);

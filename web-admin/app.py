@@ -126,13 +126,22 @@ def save_config(form):
     gateway_ids = [k for k in form.keys() if k.startswith("gw_name_")]
     gateway_ids.sort(key=lambda k: int(k.split("_")[-1]))
     gw_nodes = root.findall("gateway")
-    for idx, gk in enumerate(gateway_ids):
+
+    # 跳过完全空白的新增网关行(名称/IP/号码全空,避免误建空网关)
+    valid_ids = []
+    for gk in gateway_ids:
         i = int(gk.split("_")[-1])
-        if idx < len(gw_nodes):
-            gw = gw_nodes[idx]
-        else:
+        if form.get(f"gw_name_{i}", "").strip() or form.get(f"gw_h248_{i}", "").strip() \
+                or any(v.strip() for k, v in form.items() if k.startswith(f"gw{i}_sub_")):
+            valid_ids.append(i)
+
+    for pos, i in enumerate(valid_ids):
+        is_new = pos >= len(gw_nodes)
+        if is_new:
             gw = etree.SubElement(root, "gateway")
             gw_nodes.append(gw)
+        else:
+            gw = gw_nodes[pos]
         set_text(gw, "name", form.get(f"gw_name_{i}", ""))
         ip = gw.find("ip")
         if ip is None:
@@ -140,6 +149,9 @@ def save_config(form):
         set_text(ip, "h248", form.get(f"gw_h248_{i}", ""))
         set_text(ip, "h248port", form.get(f"gw_h248port_{i}", "2944"))
         # 网关级 callcontrol 不生效(源码仅 mgc.callcontrol 决定流程),隐藏不写,保留 XML 原值
+        # 新网关补 profile 引用(缺失时网关能力不全,ETSI 收号事件不生效)
+        if is_new and gw.find("profile") is None:
+            etree.SubElement(gw, "profile").text = "profile_default"
 
         # 重建 pstn 号码(保留 isdn/pri 不动)
         # 不依赖连续索引: 兼容页面删除行导致的索引断档
@@ -164,7 +176,7 @@ def save_config(form):
             etree.SubElement(sub, "number").text = sub_num.strip()
 
     # 多余网关节点删除
-    for extra in gw_nodes[len(gateway_ids):]:
+    for extra in gw_nodes[len(valid_ids):]:
         root.remove(extra)
 
     # ---- 写回(保留注释、缩进) ----
