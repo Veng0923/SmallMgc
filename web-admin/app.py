@@ -122,6 +122,7 @@ def save_config(form):
         set_text(gw, "callcontrol", form.get(f"gw_callcontrol_{i}", "a"))
 
         # 重建 pstn 号码(保留 isdn/pri 不动)
+        # 不依赖连续索引: 兼容页面删除行导致的索引断档
         terms = gw.find("terminations")
         if terms is None:
             terms = etree.SubElement(gw, "terminations")
@@ -130,15 +131,16 @@ def save_config(form):
             pstn = etree.SubElement(terms, "pstn")
         for old in pstn.findall("subscriber"):
             pstn.remove(old)
-        for j in range(100):
-            sub_id = form.get(f"gw{i}_sub_id_{j}")
-            sub_num = form.get(f"gw{i}_sub_num_{j}")
-            if sub_id is None:
-                break
-            if sub_id.strip() == "" and sub_num.strip() == "":
+        sub_fields = [(k, v) for k, v in form.items()
+                      if k.startswith(f"gw{i}_sub_id_")]
+        sub_fields.sort(key=lambda kv: int(kv[0].rsplit("_", 1)[-1]))
+        for k, v in sub_fields:
+            j = int(k.rsplit("_", 1)[-1])
+            sub_num = form.get(f"gw{i}_sub_num_{j}", "")
+            if v.strip() == "" and sub_num.strip() == "":
                 continue
             sub = etree.SubElement(pstn, "subscriber")
-            etree.SubElement(sub, "id").text = sub_id.strip()
+            etree.SubElement(sub, "id").text = v.strip()
             etree.SubElement(sub, "number").text = sub_num.strip()
 
     # 多余网关节点删除

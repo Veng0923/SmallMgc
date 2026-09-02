@@ -104,7 +104,8 @@
 function addSub(gwIdx) {
   const table = document.getElementById('subs-' + gwIdx);
   const row = table.insertRow();
-  const n = table.rows.length - 1;
+  // 号码序号 = 总行数 - 表头行(1) - 新行自身(1);直接数号码行更稳
+  const n = table.rows.length - 2;
   row.innerHTML = '<td><input type="text" name="gw' + gwIdx + '_sub_id_' + n + '"></td>' +
                   '<td><input type="text" name="gw' + gwIdx + '_sub_num_' + n + '"></td>' +
                   '<td><button type="button" class="btn-del" onclick="this.closest(\'tr\').remove()">删除</button></td>';
