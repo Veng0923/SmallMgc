@@ -139,7 +139,7 @@ def save_config(form):
             ip = etree.SubElement(gw, "ip")
         set_text(ip, "h248", form.get(f"gw_h248_{i}", ""))
         set_text(ip, "h248port", form.get(f"gw_h248port_{i}", "2944"))
-        set_text(gw, "callcontrol", form.get(f"gw_callcontrol_{i}", "a"))
+        # 网关级 callcontrol 不生效(源码仅 mgc.callcontrol 决定流程),隐藏不写,保留 XML 原值
 
         # 重建 pstn 号码(保留 isdn/pri 不动)
         # 不依赖连续索引: 兼容页面删除行导致的索引断档

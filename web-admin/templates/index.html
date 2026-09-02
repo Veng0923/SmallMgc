@@ -78,13 +78,7 @@
       <p><label>网关 IP:</label>
          <input type="text" name="gw_h248_{{ gw_idx }}" value="{{ gw.h248 }}"></p>
       <p><label>端口:</label>
-         <input type="number" name="gw_h248port_{{ gw_idx }}" value="{{ gw.h248port }}">
-         <label style="width:80px">呼叫流程:</label>
-         <select name="gw_callcontrol_{{ gw_idx }}">
-           <option value="a" {% if gw.callcontrol == 'a' %}selected{% endif %}>a</option>
-           <option value="h" {% if gw.callcontrol == 'h' %}selected{% endif %}>h</option>
-           <option value="n" {% if gw.callcontrol == 'n' %}selected{% endif %}>n</option>
-         </select></p>
+         <input type="number" name="gw_h248port_{{ gw_idx }}" value="{{ gw.h248port }}"></p>
 
       <b>注册号码:</b>
       <table id="subs-{{ gw_idx }}">
