@@ -56,11 +56,16 @@
          <input type="text" name="mgc_h248" value="{{ mgc.h248 }}" placeholder="服务器真实 IP"></p>
       <p><label>H.248 端口:</label>
          <input type="number" name="mgc_h248port" value="{{ mgc.h248port }}"></p>
-      <p><label>数图模板:</label>
-         <input type="text" name="mgc_digitmap" value="{{ mgc.digitmap }}"
-                placeholder="如 xxxxx / x. 等 H.248 DigitMap 语法"></p>
       <p><label>呼叫流程:</label>
-         <input type="text" name="mgc_callcontrol" value="{{ mgc.callcontrol }}" placeholder="a/h/n/e/x"></p>
+         <select name="mgc_callcontrol" onchange="toggleDigitmap()">
+           <option value="a" {% if mgc.callcontrol == 'a' %}selected{% endif %}>a - 基本呼叫</option>
+           <option value="h" {% if mgc.callcontrol == 'h' %}selected{% endif %}>h - HCC</option>
+           <option value="n" {% if mgc.callcontrol == 'n' %}selected{% endif %}>n - ETSI</option>
+         </select></p>
+      <p id="digitmap-row">
+         <label>数图模板:</label>
+         <input type="text" id="mgc_digitmap" name="mgc_digitmap" value="{{ mgc.digitmap }}"
+                placeholder="如 xxxxx / x. 等 H.248 DigitMap 语法"></p>
     </div>
 
     <!-- ============ 网关列表 ============ -->
@@ -75,7 +80,11 @@
       <p><label>端口:</label>
          <input type="number" name="gw_h248port_{{ gw_idx }}" value="{{ gw.h248port }}">
          <label style="width:80px">呼叫流程:</label>
-         <input type="text" name="gw_callcontrol_{{ gw_idx }}" value="{{ gw.callcontrol }}" style="width:60px"></p>
+         <select name="gw_callcontrol_{{ gw_idx }}">
+           <option value="a" {% if gw.callcontrol == 'a' %}selected{% endif %}>a</option>
+           <option value="h" {% if gw.callcontrol == 'h' %}selected{% endif %}>h</option>
+           <option value="n" {% if gw.callcontrol == 'n' %}selected{% endif %}>n</option>
+         </select></p>
 
       <b>注册号码:</b>
       <table id="subs-{{ gw_idx }}">
@@ -104,6 +113,17 @@
 </div>
 
 <script>
+// 数图仅 ETSI(n) 流程需要:选 n 显示并启用,其他流程隐藏且不提交(disabled)
+function toggleDigitmap() {
+  const sel = document.querySelector('select[name="mgc_callcontrol"]');
+  const row = document.getElementById('digitmap-row');
+  const input = document.getElementById('mgc_digitmap');
+  const show = sel.value === 'n';
+  row.style.display = show ? '' : 'none';
+  input.disabled = !show;   // disabled 不提交 → 保存时保留配置里的原数图
+}
+toggleDigitmap();           // 页面加载时按当前配置的呼叫流程初始化
+
 function addSub(gwIdx) {
   const table = document.getElementById('subs-' + gwIdx);
   const row = table.insertRow();

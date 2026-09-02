@@ -114,8 +114,13 @@ def save_config(form):
     set_text(mgc, "name", form.get("mgc_name", ""))
     set_text(mgc.find("ip"), "h248", form.get("mgc_h248", ""))
     set_text(mgc.find("ip"), "h248port", form.get("mgc_h248port", "2944"))
-    set_text(mgc, "digitmap", form.get("mgc_digitmap", ""))
+    # 数图仅在表单提交时更新(仅 n/ETSI 流程显示并提交;其他流程保留原值)
+    if "mgc_digitmap" in form:
+        set_text(mgc, "digitmap", form.get("mgc_digitmap", ""))
     set_text(mgc, "callcontrol", form.get("mgc_callcontrol", "a"))
+    # ETSI(n) 流程下发 DigitMap 描述符,数图不能为空
+    if "n" in form.get("mgc_callcontrol", "") and (mgc.findtext("digitmap") or "").strip() == "":
+        return False, "ETSI(n) 流程必须填写数图模板"
 
     # ---- 网关段(按表单索引重建 pstn 号码) ----
     gateway_ids = [k for k in form.keys() if k.startswith("gw_name_")]
